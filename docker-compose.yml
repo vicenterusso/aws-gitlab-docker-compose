@@ -1,0 +1,33 @@
+version: '3.6'
+services:
+  web:
+    image: gitlab/gitlab-ce:16.9.0-ce.0
+    container_name: gitlab-ce
+    restart: unless-stopped
+    hostname: 'gitlab.mydomain.com'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.mydomain.com'  # Use HTTP here since SSL is terminated at the ELB
+        gitlab_rails['gitlab_shell_ssh_port'] = 22
+        gitlab_rails['gitlab_ssh_host'] = 'git.mydomain.com''
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['redirect_http_to_https'] = false
+        # Custom Nginx config to accept any domain
+        nginx['custom_gitlab_server_config'] = "server_name ~^.*$$;"
+    ports:
+      - '8088:80'
+      - '2222:22'
+    volumes:
+      - './data/config:/etc/gitlab'
+      - './data/logs:/var/log/gitlab'
+      - './data/data:/var/opt/gitlab'
+    shm_size: '256m'
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:v16.9.0
+    container_name: gitlab-runner
+    restart: unless-stopped
+    volumes:
+      - './data/gitlab-runner/config:/etc/gitlab-runner'
+      - '/var/run/docker.sock:/var/run/docker.sock'
